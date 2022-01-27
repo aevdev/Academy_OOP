@@ -1,5 +1,6 @@
 ﻿#include<iostream>
 #include<string>
+#include<fstream>
 using namespace std;
 
 #define HUMAN_TAKE_PARAMETERS const std::string& last_name, const std::string& first_name, unsigned int age
@@ -50,11 +51,42 @@ public:
 	}
 
 	//				Methods:
-	virtual void print()const
+	virtual std::ostream& print(std::ostream& os = cout)const
 	{
-		cout << last_name << " " << first_name << " " << age << " ���" << endl;
+		return os << last_name << " " << first_name << " " << age << " years" << endl;
+	}
+	virtual std::ofstream& print(std::ofstream& os)const
+	{
+		os.left;
+		os.width(10);
+		os << last_name;
+		os.width(10);
+		os << first_name;
+		os.width(3);
+		os << age;
+		return os;
+	}
+	virtual ifstream& scan(ifstream& is)
+	{
+		is >> last_name >> first_name >> age;
+		return is;
 	}
 };
+
+std::ostream& operator<<(std::ostream& os, const Human& obj)
+{
+	return obj.print(os);
+}
+
+ofstream& operator<<(std::ofstream& os, const Human& obj)
+{
+	return obj.print(os);
+}
+
+ifstream& operator>>(ifstream& is, Human& obj)
+{
+	return obj.scan(is);
+}
 
 #define STUDENT_TAKE_PARAMETERS const std::string& speciality, const std::string& group, double rating, double attendance
 #define STUDENT_GIVE_PARAMETERS speciality, group, rating, attendance
@@ -118,6 +150,25 @@ public:
 		Human::print();
 		cout << speciality << " " << group << " " << rating << " " << attendance << endl;
 	}
+	std::ofstream& print(std::ofstream& os)const
+	{
+		Human::print(os) << " ";
+		os.width(25);
+		os << speciality;
+		os.width(10);
+		os << group;
+		os.width(5);
+		os << rating;
+		os.width(10);
+		os << attendance;
+		return os;
+	}
+	ifstream& scan(ifstream& is)
+	{
+		Human::scan(is);
+		is >> speciality >> group >> rating >> attendance;
+		return is;
+	}
 };
 
 #define TEACHER_TAKE_PARAMETERS const std::string& speciality, unsigned int experience
@@ -161,6 +212,21 @@ public:
 		Human::print();
 		cout << speciality << " " << experience << endl;
 	}
+	std::ofstream& print(std::ofstream& os)const
+	{
+		Human::print(os) << " ";
+		os.width(25);
+		os << speciality;
+		os.width(10);
+		os << experience;
+		return os;
+	}
+	ifstream& scan(ifstream& is)
+	{
+		Human::scan(is);
+		is >> speciality >> experience;
+		return is;
+	}
 };
 
 class Graduate :public Student
@@ -192,11 +258,32 @@ public:
 		Student::print();
 		cout << subject << endl;
 	}
+	std::ofstream& print(std::ofstream& os)const
+	{
+		Student::print(os) << " ";
+		os.width(10);
+		os << subject;
+		return os;
+	}
+	ifstream& scan(ifstream& is)
+	{
+		Student::scan(is);
+		is >> subject;
+		return is;
+	}
+
 };
 
+Human* HumanFactory(const string& type)
+{
+	if (type.find("Student") != std::string::npos) return new Student("", "", 0, "", "", 0, 0);
+	if (type.find("Graduate") != std::string::npos) return new Graduate("", "", 0, "", "", 0, 0, "");
+	if (type.find("Teacher") != std::string::npos) return new Teacher("", "", 0, "", 0);
+}
 //Resharper
 
 //#define INHERITANCE_CHECK
+//#define SAVE_TO_FILE
 
 void main()
 {
@@ -215,8 +302,9 @@ void main()
 	grad.print();
 #endif // INHERITANCE_CHECK
 
+#ifdef SAVE_TO_FILE
 	//int arr[] = { 3,5,8,13,21 };
-	//Generalisation (up-cast)
+//Generalisation (up-cast)
 	Human* group[] =
 	{
 		new Student("Pinkman", "Jessie", 25, "Chemistry", "WW_123", 85, 95),
@@ -236,9 +324,62 @@ void main()
 		cout << "\n-----------------------------------------------\n";
 	}
 
+	ofstream fout("file.txt");
+	for (int i = 0; i < sizeof(group) / sizeof(Human*); ++i)
+	{
+		fout.left;
+		fout.width(25);
+		fout << string(typeid(*group[i]).name()) + ":";
+		fout << *group[i] << endl;
+	}
+	fout.close();
+	system("start notepad file.txt");
+
 	////////////////////////////////////////
 	for (int i = 0; i < sizeof(group) / sizeof(group[0]); i++)
 	{
 		delete group[i];
 	}
+#endif // SAVE_TO_FILE
+
+	Human** group = nullptr;
+	int n = 0;
+
+	ifstream fin("file.txt");
+	if (fin.is_open())
+	{
+		string human_type;
+		for (; !fin.eof(); ++n)
+		{
+			getline(fin, human_type);
+		}
+		n--;
+
+		group = new Human*[n] {};
+
+		fin.clear();
+		fin.seekg(0);
+
+		for (int i = 0; i < n; ++i)
+		{
+			getline(fin, human_type, ':');
+			group[i] = HumanFactory(human_type);
+			fin >> *group[i];
+		}
+	}
+	else
+	{
+		cerr << "Error: File not found!";
+	}
+
+	for (int i = 0; i < n; ++i)
+	{
+		cout << *group[i] << endl;
+	}
+	for (int i = 0; i < n; ++i)
+	{
+		delete[] group[i];
+	}
+	delete[] group;
+	fin.close();
 }
